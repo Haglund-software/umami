@@ -16,9 +16,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 COPY docker/proxy.ts ./src
 
-ARG BASE_PATH
-
-ENV BASE_PATH=$BASE_PATH
+# Hardcoded for kunbord.com/umami path proxy (see Kunbord/docs/umami-railway.md)
+ENV BASE_PATH=/umami
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="postgresql://user:pass@localhost:5432/dummy"
 
@@ -28,7 +27,6 @@ RUN npm run build-docker
 FROM node:${NODE_IMAGE_VERSION} AS runner
 WORKDIR /app
 
-ARG PRISMA_VERSION="7.3.0"
 ARG NODE_OPTIONS
 
 ENV NODE_ENV=production
@@ -41,11 +39,11 @@ RUN set -x \
     && apk add --no-cache curl \
     && npm install -g pnpm
 
-# Script dependencies
+# Pin to package.json (^7.8.0); do not use ARG — Railway can pass empty build args
 RUN pnpm --allow-build='@prisma/engines' add npm-run-all dotenv chalk semver \
-    prisma@${PRISMA_VERSION} \
-    @prisma/client@${PRISMA_VERSION} \
-    @prisma/adapter-pg@${PRISMA_VERSION}
+    prisma@7.8.0 \
+    @prisma/client@7.8.0 \
+    @prisma/adapter-pg@7.8.0
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder /app/prisma ./prisma
