@@ -41,22 +41,20 @@ RUN set -x \
     && apk add --no-cache curl \
     && npm install -g pnpm
 
-# Script deps (merged into node_modules when standalone is copied below)
-COPY pnpm-workspace.yaml ./
-RUN pnpm add npm-run-all dotenv chalk semver \
-    prisma@7.8.0 \
-    @prisma/client@7.8.0 \
-    @prisma/adapter-pg@7.8.0
-
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/generated ./generated
-
-# Standalone overwrites package.json; node_modules dirs are merged
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+
+# Script deps for check-db.js (must run after standalone — earlier pnpm add is overwritten)
+COPY pnpm-workspace.yaml ./
+RUN pnpm add dotenv chalk semver \
+    prisma@7.8.0 \
+    @prisma/client@7.8.0 \
+    @prisma/adapter-pg@7.8.0
 
 RUN chown -R nextjs:nodejs /app
 
